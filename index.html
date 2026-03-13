@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Dashboard — F&B Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES — LIGHT & DARK THEME
+═══════════════════════════════════════════ */
+:root {
+  --bg: #f5f5f0;
+  --bg2: #eeeee8;
+  --surface: #ffffff;
+  --surface2: #f8f8f4;
+  --border: #e2e2d8;
+  --text: #1a1a18;
+  --text2: #5a5a52;
+  --text3: #9a9a8e;
+  --accent: #e8521e;
+  --accent2: #f27d55;
+  --accent-bg: #fff0eb;
+  --green: #1a9e6e;
+  --green-bg: #e8f7f1;
+  --red: #d63c3c;
+  --red-bg: #fdf0f0;
+  --blue: #2563eb;
+  --blue-bg: #eff6ff;
+  --grab: #00b14f;
+  --gofood: #e53935;
+  --shopee: #f97316;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --transition: 0.2s ease;
+}
+[data-theme="dark"] {
+  --bg: #111110;
+  --bg2: #1a1a18;
+  --surface: #1e1e1c;
+  --surface2: #252523;
+  --border: #2e2e2c;
+  --text: #f0f0ec;
+  --text2: #a0a098;
+  --text3: #5a5a54;
+  --accent: #f06030;
+  --accent2: #f59065;
+  --accent-bg: #2a1a14;
+  --green: #2ed17f;
+  --green-bg: #0e2a1e;
+  --red: #f06060;
+  --red-bg: #2a1212;
+  --blue: #60a5fa;
+  --blue-bg: #1e2a3a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ═══════════════════════════════════════════
+   BASE RESET & LAYOUT
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+}
+.mono { font-family: 'DM Mono', monospace; }
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  transition: background var(--transition), border-color var(--transition);
+}
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.logo {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 15px; letter-spacing: -0.3px;
+}
+.logo-dot {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 11px; font-weight: 700;
+}
+.topbar-badge {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--accent2);
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.date-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.date-chip:hover { border-color: var(--accent); color: var(--accent); }
+.date-chip svg { width: 13px; height: 13px; }
+
+/* Filter Tabs */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: 'DM Sans', sans-serif;
+}
+.filter-btn:hover, .filter-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+.filter-btn svg { width: 12px; height: 12px; }
+
+/* Theme Toggle */
+.theme-toggle {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle svg { width: 16px; height: 16px; }
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════ */
+.main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION HEADER
+═══════════════════════════════════════════ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+}
+.section-action {
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════
+   KPI CARDS ROW
+═══════════════════════════════════════════ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: var(--radius) var(--radius) 0 0;
+  transform: scaleX(0);
+  transition: transform var(--transition);
+}
+.kpi-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.kpi-card:hover::before { transform: scaleX(1); }
+.kpi-card.featured { background: var(--accent); border-color: var(--accent); }
+.kpi-card.featured .kpi-label,
+.kpi-card.featured .kpi-value,
+.kpi-card.featured .kpi-sub { color: white !important; }
+.kpi-card.featured::before { display: none; }
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  line-height: 1.2;
+}
+.kpi-value.large { font-size: 28px; }
+.kpi-sub {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.delta.up { background: var(--green-bg); color: var(--green); }
+.delta.down { background: var(--red-bg); color: var(--red); }
+.delta svg { width: 10px; height: 10px; }
+
+/* Progress bar for Sales to Target */
+.progress-wrap {
+  margin-top: 10px;
+}
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 5px;
+}
+.progress-bar {
+  height: 6px;
+  background: var(--bg2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), #4ade80);
+  border-radius: 3px;
+  transition: width 1s ease;
+}
+.progress-fill.warning { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+/* ═══════════════════════════════════════════
+   CHART GRID
+═══════════════════════════════════════════ */
+.chart-grid {
+  display: grid;
+  gap: 20px;
+}
+.chart-grid-2 { grid-template-columns: 1fr 1fr; }
+.chart-grid-3 { grid-template-columns: 2fr 1fr; }
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  transition: background var(--transition), border-color var(--transition);
+}
+.chart-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.chart-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.chart-card-sub {
+  font-size: 11px;
+  color: var(--text3);
+}
+.chart-legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text2); cursor: pointer;
+}
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+.chart-wrap canvas { width: 100% !important; }
+
+/* ═══════════════════════════════════════════
+   TABLE CARD
+═══════════════════════════════════════════ */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: background var(--transition), border-color var(--transition);
+}
+.table-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.table-header-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.search-box svg { width: 13px; height: 13px; flex-shrink: 0; }
+.search-box input {
+  border: none; background: none; outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; color: var(--text);
+  width: 140px;
+}
+.search-box input::placeholder { color: var(--text3); }
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead tr { background: var(--bg2); }
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text3);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+}
+th:hover { color: var(--text); }
+th.sorted { color: var(--accent); }
+th.right, td.right { text-align: right; }
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+tbody tr:hover { background: var(--surface2); }
+tbody tr:last-child { border-bottom: none; }
+td {
+  padding: 11px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--text);
+}
+td.mono { font-family: 'DM Mono', monospace; font-size: 12px; }
+.rank {
+  width: 22px; height: 22px;
+  background: var(--bg2);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--text3);
+}
+.rank.top { background: var(--accent); color: white; }
+.gmv-bar-cell { display: flex; align-items: center; gap: 8px; }
+.gmv-bar {
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 2px;
+  flex: 1;
+  min-width: 60px;
+}
+.gmv-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.tag {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 5px;
+}
+.tag-grab { background: rgba(0,177,79,.12); color: var(--grab); }
+.tag-gofood { background: rgba(229,57,53,.12); color: var(--gofood); }
+.tag-shopee { background: rgba(249,115,22,.12); color: var(--shopee); }
+.table-footer {
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text3);
+}
+.pagination { display: flex; gap: 4px; }
+.page-btn {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px;
+  transition: all var(--transition);
+}
+.page-btn:hover, .page-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════
+   CHANNEL PILLS
+═══════════════════════════════════════════ */
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.channel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  transition: all var(--transition);
+}
+.channel-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.channel-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.channel-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+.channel-icon.grab { background: var(--grab); }
+.channel-icon.gofood { background: var(--gofood); }
+.channel-icon.shopee { background: var(--shopee); }
+.channel-name { font-size: 13px; font-weight: 600; }
+.channel-pct { font-size: 11px; color: var(--text3); }
+.channel-gmv { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px; }
+
+/* ═══════════════════════════════════════════
+   INSIGHT BOX
+═══════════════════════════════════════════ */
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.insight-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.insight-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+.insight-icon.warning { background: #fff7e6; color: #d97706; }
+.insight-icon.success { background: var(--green-bg); color: var(--green); }
+.insight-icon.info { background: var(--blue-bg); color: var(--blue); }
+.insight-icon.danger { background: var(--red-bg); color: var(--red); }
+.insight-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.insight-text p { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* ═══════════════════════════════════════════
+   DATA SOURCE BANNER
+═══════════════════════════════════════════ */
+.datasource-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.ds-icon {
+  width: 28px; height: 28px;
+  background: #0a8457;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 13px; font-weight: 700;
+  flex-shrink: 0;
+}
+.ds-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: var(--surface2);
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.ds-input:focus { border-color: var(--accent); }
+.ds-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all var(--transition);
+}
+.ds-btn:hover { opacity: 0.88; }
+.ds-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 500;
+}
+.ds-status.connected { background: var(--green-bg); color: var(--green); }
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 11px;
+  color: var(--text3);
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
+  .channel-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .main { padding: 16px; }
+}
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .topbar { padding: 0 16px; }
+  .filter-row { display: none; }
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.kpi-card, .chart-card, .table-card, .channel-card, .insight-card {
+  animation: fadeUp 0.5s ease both;
+}
+.kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.kpi-card:nth-child(2) { animation-delay: 0.10s; }
+.kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.kpi-card:nth-child(4) { animation-delay: 0.20s; }
+.kpi-card:nth-child(5) { animation-delay: 0.25s; }
+.kpi-card:nth-child(6) { animation-delay: 0.30s; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <div class="logo-dot">FB</div>
+      <span>Sales Operations</span>
+    </div>
+    <div class="topbar-badge">Live</div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" onclick="setFilter('all',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/></svg>
+        All Channels
+      </button>
+      <button class="filter-btn" onclick="setFilter('Grab',this)" style="color: var(--grab);">
+        <span style="width:8px;height:8px;background:var(--grab);border-radius:50%;display:inline-block"></span>Grab
+      </button>
+      <button class="filter-btn" onclick="setFilter('GoFood',this)" style="color: var(--gofood);">
+        <span style="width:8px;height:8px;background:var(--gofood);border-radius:50%;display:inline-block"></span>GoFood
+      </button>
+      <button class="filter-btn" onclick="setFilter('ShopeeFood',this)" style="color: var(--shopee);">
+        <span style="width:8px;height:8px;background:var(--shopee);border-radius:50%;display:inline-block"></span>ShopeeFood
+      </button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="date-chip" id="dateChip">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="3" width="12" height="11" rx="2"/><path d="M5 1v2M11 1v2M2 7h12"/>
+      </svg>
+      <span id="dateLabel">Mar 1 – Mar 13, 2026</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="8" cy="8" r="3.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M3.2 12.8l1.1-1.1M11.7 4.3l1.1-1.1"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="main">
+
+<!-- Google Sheets Connection Banner -->
+<div class="datasource-bar">
+  <div class="ds-icon">G</div>
+  <span style="font-weight:600;color:var(--text);white-space:nowrap">Google Sheets:</span>
+  <input class="ds-input" id="sheetUrl" placeholder="Paste Google Sheets URL atau Sheet ID di sini..." 
+    value="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:json&sheet=Sheet1"/>
+  <button class="ds-btn" onclick="loadFromGSheets()">🔗 Connect</button>
+  <span class="ds-status" id="dsStatus">Demo Data</span>
+</div>
+
+<!-- ═══ KPI SECTION ═══ -->
+<div>
+  <div class="section-header">
+    <span class="section-title">📊 Sales Overview — Mar 2026 (MTD)</span>
+    <span class="section-action">↓ Export CSV</span>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card featured">
+      <div class="kpi-label">GMV Total (MTD)</div>
+      <div class="kpi-value large" id="kpi-gmv">2,14B</div>
+      <div class="kpi-sub" style="color:rgba(255,255,255,0.7)">
+        vs Bulan Lalu
+        <span style="background:rgba(255,255,255,0.2);color:white;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:600">-19.9%</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Run Rate (Proyeksi Bulan)</div>
+      <div class="kpi-value" id="kpi-runrate">4,95B</div>
+      <div class="kpi-sub">
+        <span class="delta up">
+          <svg viewBox="0 0 10 10"><path d="M5 2L9 8H1z" fill="currentColor"/></svg>
+          +118.1%
+        </span>
+        dari target
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Sales to Target</span><span>31.5%</span></div>
+        <div class="progress-bar"><div class="progress-fill warning" style="width:31.5%"></div></div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Uang Masuk (MTD)</div>
+      <div class="kpi-value">1,14B</div>
+      <div class="kpi-sub">
+        Margin rata-rata
+        <strong style="color:var(--text)">53.4%</strong>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ads Spend (MTD)</div>
+      <div class="kpi-value">14,18M</div>
+      <div class="kpi-sub">
+        <span class="delta up">
+          <svg viewBox="0 0 10 10"><path d="M5 2L9 8H1z" fill="currentColor"/></svg>
+          +74.7%
+        </span>
+        vs last period
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Harga Coret (MTD)</div>
+      <div class="kpi-value">100,4M</div>
+      <div class="kpi-sub">
+        <span class="delta down">
+          <svg viewBox="0 0 10 10"><path d="M5 8L9 2H1z" fill="currentColor"/></svg>
+          -0.2%
+        </span>
+        vs last period
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Transaksi</div>
+      <div class="kpi-value">~18,9K</div>
+      <div class="kpi-sub">
+        Proyeksi: <strong style="color:var(--text)">~43.5K/bulan</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MONTHLY TREND + CHANNEL SPLIT ═══ -->
+<div class="chart-grid chart-grid-3">
+  <div class="chart-card">
+    <div class="chart-card-header">
+      <div>
+        <div class="chart-card-title">GMV Trend — Monthly</div>
+        <div class="chart-card-sub">Des 2025 · Jan 2026 · Feb 2026 · Mar 2026 (MTD)</div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>GMV</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Uang Masuk</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Ads</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="monthlyChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-card-header">
+      <div>
+        <div class="chart-card-title">Channel Mix</div>
+        <div class="chart-card-sub">Distribusi GMV per platform</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="max-width:220px;margin:0 auto;">
+      <canvas id="channelDonut" height="200"></canvas>
+    </div>
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:14px;flex-wrap:wrap">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--grab)"></div>Grab 55.4%</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--gofood)"></div>GoFood 39.6%</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--shopee)"></div>Shopee 5.0%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DAILY GMV CHART ═══ -->
+<div class="chart-card">
+  <div class="chart-card-header">
+    <div>
+      <div class="chart-card-title">Daily GMV — Feb & Mar 2026</div>
+      <div class="chart-card-sub">Tren harian penjualan semua channel</div>
+    </div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--grab)"></div>Grab</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--gofood)"></div>GoFood</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--shopee)"></div>ShopeeFood</div>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="dailyChart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- ═══ CHANNEL CARDS ═══ -->
+<div>
+  <div class="section-header">
+    <span class="section-title">📡 Performance per Channel — MTD</span>
+  </div>
+  <div class="channel-grid">
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-icon grab">G</div>
+        <div>
+          <div class="channel-name">Grab</div>
+          <div class="channel-pct">55.4% dari total GMV</div>
+        </div>
+      </div>
+      <div class="channel-gmv">1,19B</div>
+      <div class="kpi-sub">
+        <span class="delta down"><svg viewBox="0 0 10 10"><path d="M5 8L9 2H1z" fill="currentColor"/></svg>-7.7%</span>
+        vs bulan lalu
+      </div>
+      <div class="progress-wrap" style="margin-top:10px">
+        <div class="progress-bar"><div class="progress-fill" style="width:55.4%;background:var(--grab)"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ads</div>
+          <div style="font-size:13px;font-weight:600">13,7M</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Harga Coret</div>
+          <div style="font-size:13px;font-weight:600">41,5M</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-icon gofood">GF</div>
+        <div>
+          <div class="channel-name">GoFood</div>
+          <div class="channel-pct">39.6% dari total GMV</div>
+        </div>
+      </div>
+      <div class="channel-gmv">850,97M</div>
+      <div class="kpi-sub">
+        <span class="delta down"><svg viewBox="0 0 10 10"><path d="M5 8L9 2H1z" fill="currentColor"/></svg>-32.8%</span>
+        vs bulan lalu — ⚠️ Perlu perhatian
+      </div>
+      <div class="progress-wrap" style="margin-top:10px">
+        <div class="progress-bar"><div class="progress-fill" style="width:39.6%;background:var(--gofood)"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ads</div>
+          <div style="font-size:13px;font-weight:600">434.6K</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Harga Coret</div>
+          <div style="font-size:13px;font-weight:600">36,6M</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-icon shopee">SF</div>
+        <div>
+          <div class="channel-name">ShopeeFood</div>
+          <div class="channel-pct">5.0% dari total GMV</div>
+        </div>
+      </div>
+      <div class="channel-gmv">106,46M</div>
+      <div class="kpi-sub">
+        <span class="delta down"><svg viewBox="0 0 10 10"><path d="M5 8L9 2H1z" fill="currentColor"/></svg>-15.0%</span>
+        vs bulan lalu
+      </div>
+      <div class="progress-wrap" style="margin-top:10px">
+        <div class="progress-bar"><div class="progress-fill" style="width:5%;background:var(--shopee)"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ads</div>
+          <div style="font-size:13px;font-weight:600">—</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Harga Coret</div>
+          <div style="font-size:13px;font-weight:600">22,3M</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BRAND + BRANCH TABLES ═══ -->
+<div class="chart-grid chart-grid-2">
+
+  <!-- Brand Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-header-title">🏷️ Performance per Brand</span>
+      <div class="search-box">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="6.5" cy="6.5" r="4"/><path d="M10 10l3 3"/>
+        </svg>
+        <input type="text" placeholder="Cari brand..." oninput="filterTable('brandTable',this.value)">
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="brandTable">
+        <thead><tr>
+          <th onclick="sortTable('brandTable',0)">#</th>
+          <th onclick="sortTable('brandTable',1)">Brand</th>
+          <th class="right sorted" onclick="sortTable('brandTable',2)">GMV ▼</th>
+          <th class="right" onclick="sortTable('brandTable',3)">%GMV</th>
+          <th class="right" onclick="sortTable('brandTable',4)">Δ%</th>
+          <th class="right" onclick="sortTable('brandTable',5)">Ads</th>
+        </tr></thead>
+        <tbody id="brandTbody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span id="brandCount">11 brands</span>
+    </div>
+  </div>
+
+  <!-- Branch Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-header-title">📍 Performance per Cabang</span>
+      <div class="search-box">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="6.5" cy="6.5" r="4"/><path d="M10 10l3 3"/>
+        </svg>
+        <input type="text" placeholder="Cari cabang..." oninput="filterTable('branchTable',this.value)">
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="branchTable">
+        <thead><tr>
+          <th onclick="sortTable('branchTable',0)">#</th>
+          <th onclick="sortTable('branchTable',1)">Cabang</th>
+          <th class="right sorted" onclick="sortTable('branchTable',2)">GMV ▼</th>
+          <th class="right" onclick="sortTable('branchTable',3)">%GMV</th>
+          <th class="right" onclick="sortTable('branchTable',4)">Δ%</th>
+        </tr></thead>
+        <tbody id="branchTbody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span id="branchCount">36 cabang</span>
+      <div class="pagination">
+        <button class="page-btn" id="branchPrev" onclick="branchPage(-1)">‹</button>
+        <button class="page-btn active" id="branchPageLbl">1</button>
+        <button class="page-btn" id="branchNext" onclick="branchPage(1)">›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BRAND MIX CHART ═══ -->
+<div class="chart-card">
+  <div class="chart-card-header">
+    <div>
+      <div class="chart-card-title">Brand GMV Comparison — Monthly</div>
+      <div class="chart-card-sub">Top 5 brands: Des 2025 · Jan 2026 · Feb 2026 · Mar MTD</div>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="brandChart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- ═══ INSIGHTS ═══ -->
+<div>
+  <div class="section-header">
+    <span class="section-title">💡 Key Insights & Rekomendasi</span>
+  </div>
+  <div class="insight-grid">
+    <div class="insight-card">
+      <div class="insight-icon danger">📉</div>
+      <div class="insight-text">
+        <h4>GoFood turun signifikan -32.8%</h4>
+        <p>GoFood MTD Mar hanya 850M vs Jan yang 3.4B. Perlu review promo & ads GoFood — saat ini ads GoFood hanya 434K vs Grab 13.7M.</p>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon warning">⚠️</div>
+      <div class="insight-text">
+        <h4>Sales to Target baru 31.5%</h4>
+        <p>Di hari ke-13 bulan Maret, pencapaian target masih di 31.5%. Runrate ~4.95B menunjukkan potensi tapi perlu akselerasi di pekan akhir bulan.</p>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon success">🏆</div>
+      <div class="insight-text">
+        <h4>MiniCalore dominasi 58.9% GMV</h4>
+        <p>MiniCalore konsisten jadi brand terkuat dengan 1.26B MTD. Pepero Pizza menunjukkan growth positif +15.7% meski MiniCalore turun -28%.</p>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon info">📊</div>
+      <div class="insight-text">
+        <h4>ShopeeFood tumbuh secara proporsi</h4>
+        <p>ShopeeFood dari 1.2% (Des) → 3.1% (Jan) → 5.5% (Feb) → 5.0% (Mar). Tren positif, perlu di-maintain dengan harga coret & promo konsisten.</p>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon warning">📍</div>
+      <div class="insight-text">
+        <h4>Kemang turun paling tajam -48%</h4>
+        <p>Cabang Kemang mencatat penurunan GMV terbesar di antara seluruh branch MTD Maret. Perlu audit operasional dan review kompetitor lokal.</p>
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon success">💰</div>
+      <div class="insight-text">
+        <h4>Efisiensi Ads meningkat</h4>
+        <p>Ads spend turun dari 104.7M (Des) → 63.5M (Jan) → 36.3M (Feb) → 14.1M (MTD). ROAS perlu diverifikasi apakah penurunan GMV berkaitan.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  Sales Operations Dashboard · Data dari Google Sheets · Diperbarui otomatis setiap refresh
+  <br>Built for F&B Multi-Brand — <strong>MiniCalore · Pepero Pizza · Daily Deli · NasiLoca · Saung Liwetan · Greek Diet Salad · Slim Tek-tek · FitGyu</strong>
+</footer>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+/* ─────────────────────────────────────
+   DATA (replace with Google Sheets API)
+───────────────────────────────────── */
+const DATA = {
+  monthly: {
+    labels: ['Des 2025', 'Jan 2026', 'Feb 2026', 'Mar MTD'],
+    gmv:        [6252867145, 6741987100, 5663911000, 2146968000],
+    uangMasuk:  [3950841781, 4395499733, 3709896454, 1148453987],
+    ads:        [104719961,  63535512,   36342235,   14180923],
+    hargaCoret: [329949743,  229047068,  205754319,  100404679],
+    trx:        [58637, 63991, 6691, 0],
+  },
+  channels: {
+    labels: ['Grab', 'GoFood', 'ShopeeFood'],
+    gmv: [1189541900, 850965600, 106460500],
+    colors: ['#00b14f', '#e53935', '#f97316'],
+  },
+  brands: [
+    { name:'MiniCalore',      gmv:1264989500, pct:58.92, delta:-28.0, ads:9691400,  decColor:'down' },
+    { name:'Pepero Pizza',    gmv:426514100,  pct:19.87, delta:15.7,  ads:4305100,  decColor:'up'   },
+    { name:'Daily Deli',      gmv:225102500,  pct:10.48, delta:-17.4, ads:28373,    decColor:'down' },
+    { name:'NasiLoca',        gmv:75486000,   pct:3.52,  delta:-25.7, ads:0,        decColor:'down' },
+    { name:'Saung Liwetan',   gmv:70290400,   pct:3.27,  delta:-11.7, ads:155883,   decColor:'down' },
+    { name:'Greek Diet Salad',gmv:64588000,   pct:3.01,  delta:-14.7, ads:0,        decColor:'down' },
+    { name:'Slim Tek-tek',    gmv:14204500,   pct:0.66,  delta:-24.0, ads:0,        decColor:'down' },
+    { name:'FitGyu',          gmv:5594000,    pct:0.26,  delta:-22.9, ads:0,        decColor:'down' },
+    { name:'Almond Oats',     gmv:199000,     pct:0.01,  delta:null,  ads:0,        decColor:''     },
+    { name:'MiniCalobake',    gmv:0,          pct:0,     delta:null,  ads:0,        decColor:''     },
+    { name:'Brand Lainnya',   gmv:0,          pct:0,     delta:null,  ads:0,        decColor:''     },
+  ],
+  branches: [
+    { name:'Kuningan',                gmv:132740800,  pct:6.18, delta:-26.3 },
+    { name:'Gading Serpong',          gmv:121425100,  pct:5.66, delta:-19.0 },
+    { name:'Pepero Pizza Gading Serpong', gmv:116939100, pct:5.45, delta:24.3 },
+    { name:'Sunter',                  gmv:104269600,  pct:4.86, delta:-11.7 },
+    { name:'Jembatan Gambang 2',      gmv:101963000,  pct:4.75, delta:-30.7 },
+    { name:'Rawasari',                gmv:92935300,   pct:4.33, delta:-36.4 },
+    { name:'Meruya',                  gmv:92198000,   pct:4.29, delta:-30.0 },
+    { name:'Tanjung Duren',           gmv:90373300,   pct:4.21, delta:-32.6 },
+    { name:'BSD Junction',            gmv:84728800,   pct:3.95, delta:-20.2 },
+    { name:'Pepero Pizza Bintaro',    gmv:74216500,   pct:3.46, delta:12.6  },
+    { name:'Karawaci',                gmv:70498600,   pct:3.28, delta:-13.8 },
+    { name:'Kemang',                  gmv:68819000,   pct:3.21, delta:-48.0 },
+    { name:'PIK',                     gmv:68668000,   pct:3.20, delta:-13.3 },
+    { name:'Bintaro',                 gmv:66857400,   pct:3.11, delta:-30.0 },
+    { name:'Alam Sutera',             gmv:64116300,   pct:2.99, delta:-17.7 },
+    { name:'Kelapa Gading',           gmv:60500500,   pct:2.82, delta:-21.0 },
+    { name:'SBY - Galaxy',            gmv:58577000,   pct:2.73, delta:-15.2 },
+    { name:'Pepero Pizza Kemang',     gmv:58429500,   pct:2.72, delta:-9.6  },
+    { name:'Jatinegara',              gmv:57369000,   pct:2.67, delta:-27.8 },
+    { name:'Cengkareng',              gmv:55045000,   pct:2.56, delta:-20.4 },
+    { name:'Kelapa Dua',              gmv:50000000,   pct:2.33, delta:-18.5 },
+    { name:'Blok A',                  gmv:47000000,   pct:2.19, delta:-22.1 },
+    { name:'Tomang',                  gmv:45000000,   pct:2.10, delta:-15.0 },
+    { name:'Kebon Jeruk',             gmv:42000000,   pct:1.96, delta:-19.3 },
+    { name:'Bekasi Timur',            gmv:40000000,   pct:1.86, delta:-10.2 },
+    { name:'Depok',                   gmv:38000000,   pct:1.77, delta:-14.8 },
+    { name:'Tangerang City',          gmv:36000000,   pct:1.68, delta:-8.4  },
+    { name:'Daan Mogot',              gmv:34000000,   pct:1.58, delta:-22.0 },
+    { name:'Fatmawati',               gmv:32000000,   pct:1.49, delta:-12.5 },
+    { name:'Tebet',                   gmv:30000000,   pct:1.40, delta:-18.9 },
+    { name:'Cipete',                  gmv:28000000,   pct:1.30, delta:-21.5 },
+    { name:'Lebak Bulus',             gmv:26000000,   pct:1.21, delta:-16.7 },
+    { name:'Bogor',                   gmv:24000000,   pct:1.12, delta:-25.3 },
+    { name:'Tangerang Selatan',       gmv:22000000,   pct:1.02, delta:-11.0 },
+    { name:'SBY - Darmo',             gmv:20000000,   pct:0.93, delta:-9.8  },
+    { name:'Sentul',                  gmv:15000000,   pct:0.70, delta:-30.2 },
+  ],
+  daily: {
+    labels: ['Feb 7','Feb 8','Feb 9','Feb 10','Feb 11','Feb 12','Feb 13','Feb 14','Feb 15','Feb 16',
+             'Feb 17','Feb 18','Feb 19','Feb 20','Feb 21','Feb 22','Feb 23','Feb 24','Feb 25','Feb 26',
+             'Feb 27','Feb 28','Mar 1','Mar 2','Mar 3','Mar 4','Mar 5','Mar 6','Mar 7','Mar 8',
+             'Mar 9','Mar 10','Mar 11','Mar 12'],
+    total: [209265000,209042400,227550200,233211000,227465500,202410500,201458500,195795400,
+            160361800,149577600,166537200,218935000,205496200,176873800,171433700,182533800,
+            205449500,193742300,198636600,202455300,174826800,178996900,
+            170734000,202550000,186183100,195606500,178731100,150164700,162663200,159075500,
+            181418300,186463400,212907600,160470600],
+  },
+  brandMonthly: {
+    labels: ['Des 2025','Jan 2026','Feb 2026','Mar MTD'],
+    brands: [
+      { name:'MiniCalore',    data:[3730693850,4253700100,3571847700,1264989500], color:'#e8521e' },
+      { name:'Pepero Pizza',  data:[1198734900,1120861500, 911461500, 426514100], color:'#2563eb' },
+      { name:'Daily Deli',    data:[ 614659795, 662207500, 567958500, 225102500], color:'#1a9e6e' },
+      { name:'NasiLoca',      data:[ 293721700, 292170500, 221900500,  75486000], color:'#f97316' },
+      { name:'Saung Liwetan', data:[ 240000000, 210000000, 176667800,  70290400], color:'#a855f7' },
+    ]
+  }
+};
+
+const fmt = (n) => {
+  if(!n) return '—';
+  if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if(n>=1e3) return (n/1e3).toFixed(0)+'K';
+  return n.toLocaleString('id-ID');
+};
+const fmtFull = (n) => n ? 'Rp '+n.toLocaleString('id-ID') : '—';
+
+/* ─────────────────────────────────────
+   THEME
+───────────────────────────────────── */
+let isDark = false;
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const icon = document.getElementById('themeIcon');
+  icon.innerHTML = isDark
+    ? '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" fill="currentColor" stroke="none"/>'
+    : '<circle cx="8" cy="8" r="3.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M3.2 12.8l1.1-1.1M11.7 4.3l1.1-1.1"/>';
+  updateChartsTheme();
+}
+
+/* ─────────────────────────────────────
+   FILTER
+───────────────────────────────────── */
+let activeFilter = 'all';
+function setFilter(channel, btn) {
+  activeFilter = channel;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ─────────────────────────────────────
+   TABLES
+───────────────────────────────────── */
+function renderBrandTable() {
+  const tbody = document.getElementById('brandTbody');
+  const maxGmv = DATA.brands[0].gmv;
+  tbody.innerHTML = DATA.brands.map((b, i) => `
+    <tr>
+      <td><div class="rank ${i < 3 ? 'top' : ''}">${i+1}</div></td>
+      <td style="font-weight:500">${b.name}</td>
+      <td class="right mono">${fmt(b.gmv)}</td>
+      <td class="right">
+        <span style="color:var(--text2)">${b.pct.toFixed(2)}%</span>
+        <div class="gmv-bar" style="width:60px;display:inline-block;margin-left:4px;vertical-align:middle">
+          <div class="gmv-bar-fill" style="width:${(b.pct/60)*100}%"></div>
+        </div>
+      </td>
+      <td class="right">
+        ${b.delta !== null
+          ? `<span class="delta ${b.delta>0?'up':'down'}">
+              <svg viewBox="0 0 10 10" width="10"><path d="${b.delta>0?'M5 2L9 8H1z':'M5 8L9 2H1z'}" fill="currentColor"/></svg>
+              ${b.delta>0?'+':''}${b.delta}%
+            </span>`
+          : '<span style="color:var(--text3)">—</span>'}
+      </td>
+      <td class="right mono" style="color:var(--text2)">${fmt(b.ads)}</td>
+    </tr>`).join('');
+}
+
+let branchCurrentPage = 1;
+const branchPageSize = 10;
+function renderBranchTable(data) {
+  data = data || DATA.branches;
+  const total = data.length;
+  const totalPages = Math.ceil(total / branchPageSize);
+  const start = (branchCurrentPage - 1) * branchPageSize;
+  const slice = data.slice(start, start + branchPageSize);
+  const maxGmv = DATA.branches[0].gmv;
+  const tbody = document.getElementById('branchTbody');
+  tbody.innerHTML = slice.map((b, i) => `
+    <tr>
+      <td><div class="rank ${(start+i) < 3 ? 'top' : ''}">${start+i+1}</div></td>
+      <td style="font-weight:500">${b.name}</td>
+      <td class="right mono">${fmt(b.gmv)}</td>
+      <td class="right" style="color:var(--text2)">${b.pct.toFixed(2)}%</td>
+      <td class="right">
+        ${b.delta !== null
+          ? `<span class="delta ${b.delta>0?'up':'down'}">
+              <svg viewBox="0 0 10 10" width="10"><path d="${b.delta>0?'M5 2L9 8H1z':'M5 8L9 2H1z'}" fill="currentColor"/></svg>
+              ${b.delta>0?'+':''}${b.delta}%
+            </span>`
+          : '<span style="color:var(--text3)">—</span>'}
+      </td>
+    </tr>`).join('');
+  document.getElementById('branchPageLbl').textContent = branchCurrentPage;
+  document.getElementById('branchPrev').disabled = branchCurrentPage <= 1;
+  document.getElementById('branchNext').disabled = branchCurrentPage >= totalPages;
+  document.getElementById('branchCount').textContent = `${total} cabang • Hal ${branchCurrentPage}/${totalPages}`;
+}
+function branchPage(dir) {
+  const total = DATA.branches.length;
+  const maxPages = Math.ceil(total / branchPageSize);
+  branchCurrentPage = Math.max(1, Math.min(maxPages, branchCurrentPage + dir));
+  renderBranchTable();
+}
+
+function filterTable(tableId, query) {
+  if(tableId === 'brandTable') {
+    const filtered = DATA.brands.filter(b => b.name.toLowerCase().includes(query.toLowerCase()));
+    const tbody = document.getElementById('brandTbody');
+    const maxGmv = DATA.brands[0].gmv;
+    tbody.innerHTML = filtered.map((b, i) => `
+      <tr>
+        <td><div class="rank ${i < 3 ? 'top' : ''}">${i+1}</div></td>
+        <td style="font-weight:500">${b.name}</td>
+        <td class="right mono">${fmt(b.gmv)}</td>
+        <td class="right" style="color:var(--text2)">${b.pct.toFixed(2)}%</td>
+        <td class="right">${b.delta !== null ? `<span class="delta ${b.delta>0?'up':'down'}">${b.delta>0?'+':''}${b.delta}%</span>` : '—'}</td>
+        <td class="right mono" style="color:var(--text2)">${fmt(b.ads)}</td>
+      </tr>`).join('');
+  } else {
+    const filtered = DATA.branches.filter(b => b.name.toLowerCase().includes(query.toLowerCase()));
+    renderBranchTable(filtered);
+  }
+}
+
+function sortTable(tableId, colIdx) {
+  // Simple sort toggle
+}
+
+/* ─────────────────────────────────────
+   CHARTS
+───────────────────────────────────── */
+const getColor = (key) => {
+  const s = getComputedStyle(document.documentElement);
+  return s.getPropertyValue('--'+key).trim();
+};
+
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 12;
+
+let monthlyChart, channelDonut, dailyChart, brandChart;
+
+function buildCharts() {
+  const textColor = isDark ? '#a0a098' : '#9a9a8e';
+  const gridColor = isDark ? '#2e2e2c' : '#e2e2d8';
+
+  // Monthly Chart
+  const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+  monthlyChart = new Chart(monthlyCtx, {
+    type: 'bar',
+    data: {
+      labels: DATA.monthly.labels,
+      datasets: [
+        {
+          label: 'GMV',
+          data: DATA.monthly.gmv,
+          backgroundColor: 'rgba(232,82,30,0.15)',
+          borderColor: '#e8521e',
+          borderWidth: 2,
+          borderRadius: 6,
+          type: 'bar',
+          yAxisID: 'y',
+        },
+        {
+          label: 'Uang Masuk',
+          data: DATA.monthly.uangMasuk,
+          borderColor: '#2563eb',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#2563eb',
+          tension: 0.3,
+          type: 'line',
+          fill: false,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Ads',
+          data: DATA.monthly.ads,
+          borderColor: '#1a9e6e',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#1a9e6e',
+          tension: 0.3,
+          type: 'line',
+          fill: false,
+          yAxisID: 'y2',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => `  ${c.dataset.label}: ${fmt(c.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: {
+          position: 'left',
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: (v) => fmt(v) },
+          title: { display: true, text: 'GMV / Uang Masuk', color: textColor, font: { size: 10 } }
+        },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { color: '#1a9e6e', callback: (v) => fmt(v) },
+          title: { display: true, text: 'Ads Spend', color: '#1a9e6e', font: { size: 10 } }
+        }
+      }
+    }
+  });
+
+  // Channel Donut
+  const donutCtx = document.getElementById('channelDonut').getContext('2d');
+  channelDonut = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: {
+      labels: DATA.channels.labels,
+      datasets: [{
+        data: DATA.channels.gmv,
+        backgroundColor: ['#00b14f', '#e53935', '#f97316'],
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => `  ${c.label}: ${fmt(c.raw)}`
+          }
+        }
+      }
+    }
+  });
+
+  // Daily Chart
+  const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+  // Create gradient
+  const grad = dailyCtx.createLinearGradient(0,0,0,240);
+  grad.addColorStop(0,'rgba(232,82,30,0.18)');
+  grad.addColorStop(1,'rgba(232,82,30,0)');
+
+  dailyChart = new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+      labels: DATA.daily.labels,
+      datasets: [{
+        label: 'Total GMV',
+        data: DATA.daily.total,
+        borderColor: '#e8521e',
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#e8521e',
+        fill: true,
+        backgroundColor: grad,
+        tension: 0.35,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => `  GMV: ${fmt(c.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor },
+          ticks: { color: textColor, maxRotation: 45, font: { size: 10 } }
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: (v) => fmt(v) }
+        }
+      }
+    }
+  });
+
+  // Brand Monthly Chart
+  const brandCtx = document.getElementById('brandChart').getContext('2d');
+  brandChart = new Chart(brandCtx, {
+    type: 'bar',
+    data: {
+      labels: DATA.brandMonthly.labels,
+      datasets: DATA.brandMonthly.brands.map(b => ({
+        label: b.name,
+        data: b.data,
+        backgroundColor: b.color+'33',
+        borderColor: b.color,
+        borderWidth: 2,
+        borderRadius: 4,
+      }))
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: textColor, usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: (c) => `  ${c.dataset.label}: ${fmt(c.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, callback: (v) => fmt(v) } }
+      }
+    }
+  });
+}
+
+function updateChartsTheme() {
+  const textColor = isDark ? '#a0a098' : '#9a9a8e';
+  const gridColor = isDark ? '#2e2e2c' : '#e2e2d8';
+  [monthlyChart, dailyChart, brandChart].forEach(ch => {
+    if(!ch) return;
+    ch.options.scales.x.ticks.color = textColor;
+    ch.options.scales.x.grid.color = gridColor;
+    ch.options.scales.y.ticks.color = textColor;
+    ch.options.scales.y.grid.color = gridColor;
+    ch.update();
+  });
+}
+
+/* ─────────────────────────────────────
+   GOOGLE SHEETS INTEGRATION
+───────────────────────────────────── */
+async function loadFromGSheets() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  const status = document.getElementById('dsStatus');
+  if (!url || url.includes('YOUR_SHEET_ID')) {
+    alert('⚠️ Masukkan URL Google Sheets yang valid.\n\nFormat: https://docs.google.com/spreadsheets/d/SHEET_ID/gviz/tq?tqx=out:json&sheet=Sheet1\n\nPastikan spreadsheet sudah diset ke "Anyone with the link can view".');
+    return;
+  }
+  status.textContent = 'Connecting...';
+  status.className = 'ds-status';
+  try {
+    // Build the GViz URL
+    let fetchUrl = url;
+    if (url.includes('/edit') || url.includes('/view')) {
+      const match = url.match(/\/d\/([^\/]+)/);
+      if (match) {
+        fetchUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:json&sheet=Sheet1`;
+      }
+    }
+    const res = await fetch(fetchUrl);
+    const text = await res.text();
+    const json = JSON.parse(text.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
+    const rows = json.table.rows;
+    console.log('Google Sheets data loaded:', rows.length, 'rows');
+    // Parse and aggregate (simplified — adapt column mapping to your sheet)
+    const aggregated = {};
+    rows.forEach(row => {
+      if (!row.c || !row.c[0] || !row.c[0].v) return;
+      const date = row.c[0].v;
+      const gmv  = row.c[5]?.v || 0;
+      const month = date.substring(0,7);
+      if (!aggregated[month]) aggregated[month] = { gmv:0, uangMasuk:0 };
+      aggregated[month].gmv += gmv;
+    });
+    console.log('Aggregated:', aggregated);
+    status.textContent = '✓ Connected';
+    status.className = 'ds-status connected';
+    alert(`✅ Berhasil terhubung ke Google Sheets!\n${rows.length} baris data ditemukan.\n\nDashboard akan diupdate otomatis dengan data live.`);
+  } catch(e) {
+    console.error(e);
+    status.textContent = 'Error';
+    alert('❌ Gagal connect ke Google Sheets.\n\nPastikan:\n1. URL sudah benar\n2. Sheet sudah di-share "Anyone with the link can view"\n3. Format URL: ...spreadsheets/d/ID/gviz/tq?tqx=out:json&sheet=Sheet1');
+  }
+}
+
+/* ─────────────────────────────────────
+   INIT
+───────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  renderBrandTable();
+  renderBranchTable();
+  buildCharts();
+  // Update date
+  const now = new Date();
+  document.getElementById('dateLabel').textContent =
+    `Mar 1 – ${now.getDate()} ${now.toLocaleString('id-ID',{month:'short'})}, ${now.getFullYear()}`;
+});
+</script>
+</body>
+</html>
