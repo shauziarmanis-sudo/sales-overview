@@ -469,7 +469,7 @@ td.r{text-align:right}
 <div class="ds-bar">
   <div class="ds-icon">G</div>
   <span style="font-weight:700;color:var(--txt);font-size:12px;white-space:nowrap">Google Sheets Backend:</span>
-  <input class="ds-in" id="sheetUrl" placeholder="Paste URL Google Sheets (share: Anyone with link can view)...">
+  <input class="ds-in" id="sheetUrl" placeholder="Paste URL Google Sheets (share: Anyone with link can view)..." value="https://docs.google.com/spreadsheets/d/1T6asYlRsAMtsxUofX91rUZB666hD21NhwYY5E46hUg4/edit">
   <button class="ds-btn" onclick="loadGSheets()">🔗 Connect & Sync</button>
   <span class="ds-status" id="dsStatus">📊 Embedded Demo Data</span>
 </div>
@@ -663,8 +663,10 @@ const CAB = [["2025-12-01","Alam Sutera","GoFood",2546000],["2025-12-01","Alam S
 ════════════════════════════════════ */
 const ALL_CHANNELS = ['Grab','GoFood','ShopeeFood'];
 const ALL_BRANDS   = [...new Set(MAIN.map(r=>r[2]))].sort();
-const DATE_MIN     = MAIN.reduce((a,r)=>r[0]<a?r[0]:a, '9999');
-const DATE_MAX     = MAIN.reduce((a,r)=>r[0]>a?r[0]:a, '0000');
+// DATE_MIN/MAX are now dynamic — recalculated after each GSheets sync
+// Use getDateMin() / getDateMax() instead of these consts
+let DATE_MIN = MAIN.reduce((a,r)=>r[0]<a?r[0]:a, '9999');
+let DATE_MAX = MAIN.reduce((a,r)=>r[0]>a?r[0]:a, '0000');
 
 let state = {
   dateFrom: '2026-03-01',
@@ -790,7 +792,7 @@ const gc=()=>dark?'rgba(46,46,50,.8)':'rgba(224,224,216,.8)';
 function setPreset(preset, btn) {
   document.querySelectorAll('.preset-chip').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const now = DATE_MAX;
+  const now = getDateMax() || DATE_MAX;
   let from, to=now;
   if(preset==='7d') from=offsetDate(now,-6);
   else if(preset==='14d') from=offsetDate(now,-13);
@@ -799,7 +801,7 @@ function setPreset(preset, btn) {
   else if(preset==='dec') { from='2025-12-01'; to='2025-12-31'; }
   else if(preset==='jan') { from='2026-01-01'; to='2026-01-31'; }
   else if(preset==='feb') { from='2026-02-01'; to='2026-02-28'; }
-  else if(preset==='all') { from=DATE_MIN; to=DATE_MAX; }
+  else if(preset==='all') { from=getDateMin()||DATE_MIN; to=getDateMax()||DATE_MAX; }
   document.getElementById('dateFrom').value=from;
   document.getElementById('dateTo').value=to;
   state.dateFrom=from; state.dateTo=to;
@@ -1327,66 +1329,237 @@ function render(){
 }
 
 /* ════════════════════════════════════
-   GOOGLE SHEETS
+   GOOGLE SHEETS — AUTO LOAD & SYNC
+   
+   FIX LOG:
+   - BUG: GViz dates come as "Date(2026,2,13)" (0-indexed month) → parseGVizDate()
+   - BUG: CAB array was never rebuilt after GSheets load → now rebuilt from rows
+   - BUG: DATE_MAX/MIN were const (never updated) → now dynamic via getDateMax/Min()
+   - BUG: No auto-load on startup → autoLoadOnStart() called in init
+   - FIX: Auto-refresh every 5 minutes when GSheets is connected
 ════════════════════════════════════ */
-async function loadGSheets(){
-  const url=document.getElementById('sheetUrl').value.trim();
-  if(!url){ alert('Masukkan URL Google Sheets terlebih dahulu.\n\nPastikan share ke "Anyone with the link can view".'); return; }
-  const st=document.getElementById('dsStatus');
-  st.textContent='Connecting...'; st.className='ds-status';
-  try{
-    let fetchUrl=url;
-    const match=url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if(match) fetchUrl=`https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:json&sheet=Sheet1`;
-    const res=await fetch(fetchUrl);
-    const text=await res.text();
-    const json=JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.*)\)/s)[1]);
-    const headers=json.table.cols.map(c=>c.label);
-    console.log('GSheets headers:', headers);
-    console.log('GSheets rows:', json.table.rows.length);
-    st.textContent='✓ Connected — '+json.table.rows.length+' rows';
-    st.className='ds-status ok';
-    // Parse rows into MAIN format: [date, ch, brand, gmv, um, ads, hc, trx]
-    // Column mapping: adjust index based on your sheet column order
-    const idxDate=headers.findIndex(h=>h.toLowerCase().includes('tanggal'));
-    const idxCh=headers.findIndex(h=>h.toLowerCase().includes('chanel')||h.toLowerCase().includes('channel'));
-    const idxBrand=headers.findIndex(h=>h.toLowerCase().includes('brand'));
-    const idxGmv=headers.findIndex(h=>h.toLowerCase().includes('penjualan'));
-    const idxUm=headers.findIndex(h=>h.toLowerCase().includes('uang masuk')||h.toLowerCase().includes('uangmasuk'));
-    const idxAds=headers.findIndex(h=>h.toLowerCase().includes('ads'));
-    const idxHc=headers.findIndex(h=>h.toLowerCase().includes('harga coret'));
-    const idxTrx=headers.findIndex(h=>h.toLowerCase().includes('transaksi'));
-    const newMain=[];
-    json.table.rows.forEach(row=>{
-      if(!row.c||!row.c[idxDate]?.v) return;
-      const rawDate=row.c[idxDate].v;
-      let dateStr;
-      if(typeof rawDate==='string'&&rawDate.includes('-')) dateStr=rawDate.slice(0,10);
-      else if(typeof rawDate==='object'&&rawDate) dateStr=new Date(rawDate).toISOString().slice(0,10);
-      else return;
-      const g=row.c[idxGmv]?.v||0; if(!g) return;
-      newMain.push([dateStr, row.c[idxCh]?.v||'', row.c[idxBrand]?.v||'', g,
-        row.c[idxUm]?.v||0, row.c[idxAds]?.v||0, row.c[idxHc]?.v||0, row.c[idxTrx]?.v||0]);
+
+// Parse GViz date values — handles all formats GViz can return
+function parseGVizDate(rawDate) {
+  if(!rawDate) return null;
+  // Format 1: "Date(2026,2,13)" — 0-indexed month from GViz API
+  if(typeof rawDate === 'string' && rawDate.startsWith('Date(')) {
+    const parts = rawDate.replace('Date(','').replace(')','').split(',');
+    const y = parseInt(parts[0]);
+    const m = parseInt(parts[1]) + 1; // fix 0-indexed month
+    const d = parseInt(parts[2]);
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  // Format 2: already "YYYY-MM-DD" string
+  if(typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(rawDate)) {
+    return rawDate.slice(0,10);
+  }
+  // Format 3: JS Date object or numeric timestamp
+  if(rawDate instanceof Date || typeof rawDate === 'number') {
+    return new Date(rawDate).toISOString().slice(0,10);
+  }
+  // Format 4: object with {v} property (sometimes nested)
+  if(typeof rawDate === 'object' && rawDate !== null && rawDate.v !== undefined) {
+    return parseGVizDate(rawDate.v);
+  }
+  return null;
+}
+
+// Rebuild CAB array from raw sheet rows
+function buildCABFromRows(rows, idxDate, idxCab, idxCh, idxGmv) {
+  const newCAB = [];
+  rows.forEach(row => {
+    if(!row.c) return;
+    const dateStr = parseGVizDate(row.c[idxDate]?.v);
+    if(!dateStr) return;
+    const gmv = row.c[idxGmv]?.v || 0;
+    if(!gmv) return;
+    const cab = row.c[idxCab]?.v || '';
+    const ch  = row.c[idxCh]?.v  || '';
+    newCAB.push([dateStr, cab, ch, gmv]);
+  });
+  return newCAB;
+}
+
+// Dynamic date range helpers (recalculated from live MAIN)
+function getDateMax() { return MAIN.reduce((a,r)=>r[0]>a?r[0]:a,'0000'); }
+function getDateMin() { return MAIN.reduce((a,r)=>r[0]<a?r[0]:a,'9999'); }
+
+let gsheetsConnected = false;
+let gsheetsSheetId   = '';
+let autoRefreshTimer = null;
+
+async function loadGSheets(silent=false) {
+  const urlInput = document.getElementById('sheetUrl').value.trim();
+  const url = urlInput || gsheetsSheetId;
+  if(!url && !silent) {
+    alert('Masukkan URL Google Sheets.\n\nPastikan sudah di-share: "Anyone with the link can view"\nFormat: https://docs.google.com/spreadsheets/d/SHEET_ID/...');
+    return;
+  }
+  if(!url) return; // silent call, no URL yet
+
+  const st = document.getElementById('dsStatus');
+  st.textContent = '⏳ Loading...';
+  st.className = 'ds-status';
+
+  try {
+    // Extract sheet ID
+    const matchId = url.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+    if(!matchId) throw new Error('URL tidak valid. Pastikan format: https://docs.google.com/spreadsheets/d/SHEET_ID/...');
+    gsheetsSheetId = url;
+
+    // Use GViz JSON endpoint — works for public/shared sheets
+    const fetchUrl = `https://docs.google.com/spreadsheets/d/${matchId[1]}/gviz/tq?tqx=out:json&sheet=Sheet1`;
+    const res = await fetch(fetchUrl);
+    if(!res.ok) throw new Error(`HTTP ${res.status} — Pastikan sheet sudah di-share "Anyone with the link can view"`);
+    const text = await res.text();
+
+    // GViz wraps JSON in a callback: google.visualization.Query.setResponse({...})
+    const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+    if(!jsonMatch) throw new Error('Response bukan format GViz. Pastikan URL Google Sheets yang benar.');
+    const json = JSON.parse(jsonMatch[1]);
+
+    if(!json.table || !json.table.rows) throw new Error('Tidak ada data di sheet. Pastikan sheet name "Sheet1" benar.');
+
+    const headers = json.table.cols.map(c => (c.label || c.id || '').toLowerCase().trim());
+    console.log('[GSheets] Headers:', headers);
+    console.log('[GSheets] Total rows:', json.table.rows.length);
+
+    // ── Column index detection (Sheet1 format from original Excel) ──
+    // Columns: Tanggal | Cabang | Chanel | Brand | Nama Akun | Penjualan |
+    //          Potongan | Harga Coret | Ads | Terima | Uang Masuk | Selisih |
+    //          Kode Mutasi | Transaksi | Aov
+    const findCol = (...keys) => {
+      for(const k of keys) {
+        const idx = headers.findIndex(h => h.includes(k));
+        if(idx !== -1) return idx;
+      }
+      return -1;
+    };
+
+    // Fixed column indices based on known sheet structure
+    // Try header detection first, fallback to known positions
+    let idxDate  = findCol('tanggal');       if(idxDate  < 0) idxDate  = 0;
+    let idxCab   = findCol('cabang');        if(idxCab   < 0) idxCab   = 1;
+    let idxCh    = findCol('chanel','channel'); if(idxCh  < 0) idxCh   = 2;
+    let idxBrand = findCol('brand');         if(idxBrand < 0) idxBrand = 3;
+    let idxGmv   = findCol('penjualan');     if(idxGmv   < 0) idxGmv   = 5;
+    let idxHc    = findCol('harga coret');   if(idxHc    < 0) idxHc    = 7;
+    let idxAds   = findCol('ads');           if(idxAds   < 0) idxAds   = 8;
+    let idxUm    = findCol('uang masuk');    if(idxUm    < 0) idxUm    = 10;
+    let idxTrx   = findCol('transaksi');     if(idxTrx   < 0) idxTrx   = 13;
+
+    console.log('[GSheets] Column map:', {idxDate,idxCab,idxCh,idxBrand,idxGmv,idxHc,idxAds,idxUm,idxTrx});
+
+    // ── Parse MAIN rows ──
+    const newMain = [];
+    const newCAB  = [];
+    let skipped = 0;
+
+    json.table.rows.forEach((row, i) => {
+      if(!row.c) return;
+      const dateStr = parseGVizDate(row.c[idxDate]?.v);
+      if(!dateStr) { skipped++; return; }
+
+      const gmv = Number(row.c[idxGmv]?.v) || 0;
+      const um  = Number(row.c[idxUm]?.v)  || 0;
+      const ads = Number(row.c[idxAds]?.v) || 0;
+      const hc  = Number(row.c[idxHc]?.v)  || 0;
+      const trx = Number(row.c[idxTrx]?.v) || 0;
+      const ch  = String(row.c[idxCh]?.v   || '').trim();
+      const br  = String(row.c[idxBrand]?.v || '').trim();
+      const cab = String(row.c[idxCab]?.v   || '').trim();
+
+      if(gmv > 0 || um > 0) {
+        newMain.push([dateStr, ch, br, gmv, um, ads, hc, trx]);
+        if(cab) newCAB.push([dateStr, cab, ch, gmv]);
+      }
     });
-    if(newMain.length){
-      MAIN.length=0; MAIN.push(...newMain);
-      // Recalculate DATE_MIN/MAX from fresh data
-      const newDateMax = MAIN.reduce((a,r)=>r[0]>a?r[0]:a,'0000');
-      const newDateMin = MAIN.reduce((a,r)=>r[0]<a?r[0]:a,'9999');
-      // Auto-set to MTD of latest available date
-      const lm = new Date(newDateMax);
-      const mtdFrom = `${lm.getFullYear()}-${String(lm.getMonth()+1).padStart(2,'0')}-01`;
-      state.dateFrom = mtdFrom;
-      state.dateTo = newDateMax;
-      document.getElementById('dateFrom').value = mtdFrom;
-      document.getElementById('dateTo').value = newDateMax;
-      render();
-      alert(`✅ Berhasil load ${newMain.length} baris!\nData: ${newDateMin} → ${newDateMax}\nDashboard diperbarui ke MTD terbaru.`);
+
+    console.log('[GSheets] Parsed MAIN:', newMain.length, '| CAB:', newCAB.length, '| Skipped:', skipped);
+
+    if(newMain.length === 0) {
+      throw new Error(`Berhasil fetch tapi 0 baris valid.\nSkipped: ${skipped} baris.\nCek: apakah kolom Penjualan/Uang Masuk ada dan tidak kosong semua?\nHeaders terdeteksi: ${headers.slice(0,8).join(', ')}`);
     }
-  }catch(e){
-    console.error(e);
-    st.textContent='⚠ Error';
-    alert('Gagal connect.\n\n'+e.message+'\n\nPastikan:\n1. URL benar\n2. Sheet di-share "Anyone with the link"\n3. Format URL Google Sheets valid');
+
+    // ── Update global data arrays ──
+    MAIN.length = 0; MAIN.push(...newMain);
+    CAB.length  = 0; CAB.push(...newCAB);
+
+    // ── Recalculate dynamic date bounds ──
+    const newDateMax = getDateMax();
+    const newDateMin = getDateMin();
+    console.log('[GSheets] Date range:', newDateMin, '→', newDateMax);
+
+    // ── Auto-set filter to MTD of latest date ──
+    const lm = new Date(newDateMax);
+    const mtdFrom = `${lm.getFullYear()}-${String(lm.getMonth()+1).padStart(2,'0')}-01`;
+    state.dateFrom = mtdFrom;
+    state.dateTo   = newDateMax;
+    document.getElementById('dateFrom').value = mtdFrom;
+    document.getElementById('dateTo').value   = newDateMax;
+
+    // ── Sync date input limits ──
+    document.getElementById('dateFrom').min = newDateMin;
+    document.getElementById('dateFrom').max = newDateMax;
+    document.getElementById('dateTo').min   = newDateMin;
+    document.getElementById('dateTo').max   = newDateMax;
+
+    // ── Update UI preset to MTD ──
+    document.querySelectorAll('.preset-chip').forEach(b => b.classList.remove('active'));
+    document.querySelector('.preset-chip[onclick*="mtd"]')?.classList.add('active');
+
+    // ── Re-render everything ──
+    render();
+
+    // ── Update status ──
+    gsheetsConnected = true;
+    const now = new Date().toLocaleTimeString('id-ID');
+    st.textContent = `✓ Live — ${newMain.length.toLocaleString('id-ID')} baris · ${now}`;
+    st.className = 'ds-status ok';
+
+    // ── Setup auto-refresh every 5 minutes ──
+    if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(() => {
+      console.log('[GSheets] Auto-refresh...');
+      loadGSheets(true);
+    }, 5 * 60 * 1000);
+
+    if(!silent) {
+      const msg = `✅ Berhasil load ${newMain.length.toLocaleString('id-ID')} baris data!\n` +
+                  `📅 Range: ${newDateMin} → ${newDateMax}\n` +
+                  `🔄 Auto-refresh setiap 5 menit aktif.`;
+      alert(msg);
+    }
+
+  } catch(e) {
+    console.error('[GSheets] Error:', e);
+    st.textContent = '⚠ Gagal connect';
+    st.className = 'ds-status';
+    if(!silent) {
+      alert('❌ Gagal connect ke Google Sheets:\n\n' + e.message +
+            '\n\nLangkah perbaikan:\n' +
+            '1. Buka spreadsheet → Share → Anyone with the link → Viewer\n' +
+            '2. Pastikan nama sheet adalah "Sheet1"\n' +
+            '3. Pastikan URL lengkap dengan /d/SHEET_ID/');
+    }
+  }
+}
+
+// ── Auto-load on startup if URL is pre-filled ──
+function autoLoadOnStart() {
+  const urlInput = document.getElementById('sheetUrl');
+  const savedUrl = localStorage.getItem('gsheetsUrl') || '';
+  if(savedUrl) { urlInput.value = savedUrl; }
+
+  // Listen for URL changes to save to localStorage
+  urlInput.addEventListener('change', () => {
+    localStorage.setItem('gsheetsUrl', urlInput.value);
+  });
+
+  // Auto-load if URL is pre-filled
+  if(urlInput.value && !urlInput.value.includes('YOUR_SHEET_ID')) {
+    loadGSheets(true);
   }
 }
 
@@ -1409,6 +1582,8 @@ function exportCSV(){
 ════════════════════════════════════ */
 buildBrandChips();
 render();
+// Auto-load Google Sheets on startup
+autoLoadOnStart();
 </script>
 </body>
 </html>
